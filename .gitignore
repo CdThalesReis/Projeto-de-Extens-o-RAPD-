@@ -1,162 +1,145 @@
-# Byte-compiled / optimized / DLL files
-__pycache__/
-*.py[cod]
-*$py.class
+import tkinter as tk
+from tkinter import messagebox
 
-# C extensions
-*.so
 
-# Distribution / packaging
-.Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-share/python-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-MANIFEST
+class Produto:
+    def __init__(self, id_produto, nome, categoria, unidade, quantidade_atual, quantidade_minima, preco_unitario):
+        self.id_produto = id_produto
+        self.nome = nome
+        self.categoria = categoria
+        self.unidade = unidade
+        self.quantidade_atual = quantidade_atual
+        self.quantidade_minima = quantidade_minima
+        self.preco_unitario = preco_unitario
 
-# PyInstaller
-#  Usually these files are written by a python script from a template
-#  before PyInstaller builds the exe, so as to inject date/other infos into it.
-*.manifest
-*.spec
+    def atualizar_estoque(self, quantidade):
+        self.quantidade_atual += quantidade
+        if self.quantidade_atual < self.quantidade_minima:
+            messagebox.showwarning("Estoque Baixo", f"Atenção! O estoque de {self.nome} está abaixo do mínimo recomendado.")
 
-# Installer logs
-pip-log.txt
-pip-delete-this-directory.txt
+    def __str__(self):
+        return f"{self.nome} - Estoque atual: {self.quantidade_atual} {self.unidade}, Preço: R$ {self.preco_unitario}"
 
-# Unit test / coverage reports
-htmlcov/
-.tox/
-.nox/
-.coverage
-.coverage.*
-.cache
-nosetests.xml
-coverage.xml
-*.cover
-*.py,cover
-.hypothesis/
-.pytest_cache/
-cover/
 
-# Translations
-*.mo
-*.pot
+class SistemaGerenciamento:
+    def __init__(self):
+        self.produtos = []
+        self.vendas = []
 
-# Django stuff:
-*.log
-local_settings.py
-db.sqlite3
-db.sqlite3-journal
+    def adicionar_produto(self, produto):
+        self.produtos.append(produto)
 
-# Flask stuff:
-instance/
-.webassets-cache
+    def registrar_venda(self, id_produto, quantidade):
+        produto = self.buscar_produto(id_produto)
+        if produto and produto.quantidade_atual >= quantidade:
+            produto.atualizar_estoque(-quantidade)
+            total_venda = quantidade * produto.preco_unitario
+            self.vendas.append({"id_produto": id_produto, "quantidade": quantidade, "total": total_venda})
+            messagebox.showinfo("Venda registrada", f"Produto: {produto.nome}\nQuantidade: {quantidade}\nTotal: R$ {total_venda:.2f}")
+        else:
+            messagebox.showerror("Erro", f"Estoque insuficiente para o produto {produto.nome}.")
 
-# Scrapy stuff:
-.scrapy
+    def buscar_produto(self, id_produto):
+        for produto in self.produtos:
+            if produto.id_produto == id_produto:
+                return produto
+        return None
 
-# Sphinx documentation
-docs/_build/
+    def gerar_relatorio_vendas(self):
+        total_geral = 0
+        relatorio = "Relatório de Vendas:\n"
+        for venda in self.vendas:
+            produto = self.buscar_produto(venda["id_produto"])
+            relatorio += f"Produto: {produto.nome}, Quantidade: {venda['quantidade']}, Total: R$ {venda['total']:.2f}\n"
+            total_geral += venda["total"]
+        relatorio += f"Total Geral de Vendas: R$ {total_geral:.2f}"
+        messagebox.showinfo("Relatório de Vendas", relatorio)
 
-# PyBuilder
-.pybuilder/
-target/
+    def gerar_relatorio_estoque(self):
+        relatorio = "Relatório de Estoque:\n"
+        for produto in self.produtos:
+            relatorio += str(produto) + "\n"
+        messagebox.showinfo("Relatório de Estoque", relatorio)
 
-# Jupyter Notebook
-.ipynb_checkpoints
 
-# IPython
-profile_default/
-ipython_config.py
+class InterfaceEstoque:
+    def __init__(self, root, sistema):
+        self.sistema = sistema
+        self.root = root
+        self.root.title("Sistema de Gerenciamento de Estoque")
+        self.root.geometry("400x300")
 
-# pyenv
-#   For a library or package, you might want to ignore these files since the code is
-#   intended to run in multiple environments; otherwise, check them in:
-# .python-version
+        # Widgets para registrar venda
+        tk.Label(root, text="ID do Produto:").pack()
+        self.id_produto_entry = tk.Entry(root)
+        self.id_produto_entry.pack()
 
-# pipenv
-#   According to pypa/pipenv#598, it is recommended to include Pipfile.lock in version control.
-#   However, in case of collaboration, if having platform-specific dependencies or dependencies
-#   having no cross-platform support, pipenv may install dependencies that don't work, or not
-#   install all needed dependencies.
-#Pipfile.lock
+        tk.Label(root, text="Quantidade Vendida:").pack()
+        self.quantidade_entry = tk.Entry(root)
+        self.quantidade_entry.pack()
 
-# poetry
-#   Similar to Pipfile.lock, it is generally recommended to include poetry.lock in version control.
-#   This is especially recommended for binary packages to ensure reproducibility, and is more
-#   commonly ignored for libraries.
-#   https://python-poetry.org/docs/basic-usage/#commit-your-poetrylock-file-to-version-control
-#poetry.lock
+        tk.Button(root, text="Registrar Venda", command=self.registrar_venda).pack(pady=10)
 
-# pdm
-#   Similar to Pipfile.lock, it is generally recommended to include pdm.lock in version control.
-#pdm.lock
-#   pdm stores project-wide configurations in .pdm.toml, but it is recommended to not include it
-#   in version control.
-#   https://pdm.fming.dev/latest/usage/project/#working-with-version-control
-.pdm.toml
-.pdm-python
-.pdm-build/
+        # Botões para relatórios
+        tk.Button(root, text="Gerar Relatório de Vendas", command=self.sistema.gerar_relatorio_vendas).pack(pady=5)
+        tk.Button(root, text="Gerar Relatório de Estoque", command=self.sistema.gerar_relatorio_estoque).pack(pady=5)
 
-# PEP 582; used by e.g. github.com/David-OConnor/pyflow and github.com/pdm-project/pdm
-__pypackages__/
+    def registrar_venda(self):
+        try:
+            id_produto = int(self.id_produto_entry.get())
+            quantidade = int(self.quantidade_entry.get())
+            self.sistema.registrar_venda(id_produto, quantidade)
+        except ValueError:
+            messagebox.showerror("Erro", "Por favor, insira valores válidos.")
 
-# Celery stuff
-celerybeat-schedule
-celerybeat.pid
 
-# SageMath parsed files
-*.sage.py
+def main():
+    # Inicializa o sistema
+    sistema = SistemaGerenciamento()
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
+    # Adiciona alguns produtos ao sistema
+    sistema.adicionar_produto(Produto(1, "Bacon", "Comida", "kg", 10, 5, 20.0))
+    sistema.adicionar_produto(Produto(2, "Hambúrguer de 200g", "Comida", "un", 20, 10, 6.0))
+    sistema.adicionar_produto(Produto(3, "Calabresa", "Comida", "Kg", 15, 5, 15.0))
+    sistema.adicionar_produto(Produto(4, "Queijo", "Comida", "Kg", 8, 4, 35.0))
+    sistema.adicionar_produto(Produto(5, "Presunto", "Comida", "kg", 8, 4, 20.0))
+    sistema.adicionar_produto(Produto(6, "Frango", "Comida", "Kg", 12, 6, 12.0))
+    sistema.adicionar_produto(Produto(7, "Filé Mignon", "Comida", "Kg", 12, 6, 42.0))
+    sistema.adicionar_produto(Produto(8, "Alface", "Comida", "maço", 10, 5, 10.0))
+    sistema.adicionar_produto(Produto(9, "Tomate", "Comida", "kg", 10, 5, 13.0))
+    sistema.adicionar_produto(Produto(10, "Salsicha", "Comida", "un", 100, 40, 1.0))
+    sistema.adicionar_produto(Produto(11, "Milho", "Comida", "lata", 30, 5, 5.0))
+    sistema.adicionar_produto(Produto(12, "Ervilha", "Comida", "lata", 30, 5, 5.0))
+    sistema.adicionar_produto(Produto(13, "Catupiry", "Comida", "kg", 5, 2, 40.0))
+    sistema.adicionar_produto(Produto(14, "Cheddar", "Comida", "kg", 5, 2, 50.0))
+    sistema.adicionar_produto(Produto(15, "Pão de Hambúrguer", "Comida", "un", 50, 80, 2.0))
+    sistema.adicionar_produto(Produto(16, "Pão Francês", "Comida", "un", 100, 30, 1.5))
+    sistema.adicionar_produto(Produto(17, "Batata Palha", "Comida", "Pacote", 30, 10, 8.0))
+    sistema.adicionar_produto(Produto(18, "Ketchup", "Comida", "Frasco", 20, 10, 15.0))
+    sistema.adicionar_produto(Produto(19, "Mostarda", "Comida", "Frasco", 20, 10, 10.0))
+    sistema.adicionar_produto(Produto(20, "Maionese", "Comida", "Frasco", 20, 10, 20.0))
+    sistema.adicionar_produto(Produto(21, "Batata Palito (porção)", "Comida", "Kg", 10, 5, 25.0))
+    sistema.adicionar_produto(Produto(22, "Suco de Laranja", "Bebida", "Litros", 20, 10, 4.0))
+    sistema.adicionar_produto(Produto(23, "Suco de Limão", "Bebida", "Litros", 30, 10, 5.0))
+    sistema.adicionar_produto(Produto(24, "Suco de Uva", "Bebida", "Litros", 5, 10, 5.0))
+    sistema.adicionar_produto(Produto(25, "Suco de Maracujá", "Bebida", "Litros", 6, 10, 5.0))
+    sistema.adicionar_produto(Produto(26, "Suco de Abacaxi", "Bebida", "Litros", 7, 10, 5.0))
+    sistema.adicionar_produto(Produto(27, "Suco de Acerola", "Bebida", "Litros", 10, 10, 5.0))
+    sistema.adicionar_produto(Produto(28, "Coca Cola", "Bebida", "Litros", 30, 20, 7.0))
+    sistema.adicionar_produto(Produto(29, "Guaraná", "Bebida", "Litros", 30, 20, 6.0))
+    sistema.adicionar_produto(Produto(30, "Fanta Uva", "Bebida", "Litros", 20, 20, 6.0))
+    sistema.adicionar_produto(Produto(31, "Fanta Laranja", "Bebida", "Litros", 20, 20, 6.0))
+    sistema.adicionar_produto(Produto(32, "Sprite", "Bebida", "Litros", 20, 20, 6.0))
+    sistema.adicionar_produto(Produto(33, "Cerveja Budweiser", "Bebida", "garrafa", 30, 10, 8.0))
+    sistema.adicionar_produto(Produto(34, "Cerveja Original", "Bebida", "garrafa", 30, 10, 8.0))
+    sistema.adicionar_produto(Produto(35, "Cerveja Skol", "Bebida", "garrafa", 30, 10, 8.0))
 
-# Spyder project settings
-.spyderproject
-.spyproject
+    # Cria a interface gráfica
+    root = tk.Tk()
+    interface = InterfaceEstoque(root, sistema)
 
-# Rope project settings
-.ropeproject
+    root.mainloop()
 
-# mkdocs documentation
-/site
 
-# mypy
-.mypy_cache/
-.dmypy.json
-dmypy.json
-
-# Pyre type checker
-.pyre/
-
-# pytype static type analyzer
-.pytype/
-
-# Cython debug symbols
-cython_debug/
-
-# PyCharm
-#  JetBrains specific template is maintained in a separate JetBrains.gitignore that can
-#  be found at https://github.com/github/gitignore/blob/main/Global/JetBrains.gitignore
-#  and can be added to the global gitignore or merged into this file.  For a more nuclear
-#  option (not recommended) you can uncomment the following to ignore the entire idea folder.
-#.idea/
+if __name__ == "__main__":
+    main()
